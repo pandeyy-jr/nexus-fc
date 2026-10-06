@@ -1,0 +1,63 @@
+from enum import StrEnum
+
+
+class CompetitionType(StrEnum):
+    LEAGUE = "LEAGUE"
+    CUP = "CUP"
+    FRIENDLY = "FRIENDLY"
+    TOURNAMENT = "TOURNAMENT"
+    CONTINENTAL = "CONTINENTAL"
+    OTHER = "OTHER"
+
+
+class MatchSide(StrEnum):
+    HOME = "HOME"
+    AWAY = "AWAY"
+    NEUTRAL = "NEUTRAL"
+
+
+class MatchStatus(StrEnum):
+    SCHEDULED = "SCHEDULED"
+    LIVE = "LIVE"
+    COMPLETED = "COMPLETED"
+    POSTPONED = "POSTPONED"
+    CANCELLED = "CANCELLED"
+    ABANDONED = "ABANDONED"
+
+
+class MatchSquadStatus(StrEnum):
+    SELECTED = "SELECTED"
+    STARTER = "STARTER"
+    SUBSTITUTE = "SUBSTITUTE"
+    UNUSED = "UNUSED"
+    WITHDRAWN = "WITHDRAWN"
+
+
+class MatchEventType(StrEnum):
+    GOAL = "GOAL"
+    OWN_GOAL = "OWN_GOAL"
+    YELLOW_CARD = "YELLOW_CARD"
+    RED_CARD = "RED_CARD"
+    SECOND_YELLOW = "SECOND_YELLOW"
+    SUBSTITUTION = "SUBSTITUTION"
+    PENALTY_WON = "PENALTY_WON"
+    PENALTY_MISSED = "PENALTY_MISSED"
+    VAR_REVIEW = "VAR_REVIEW"
+    KICK_OFF = "KICK_OFF"
+    HALF_TIME = "HALF_TIME"
+    FULL_TIME = "FULL_TIME"
+    OTHER = "OTHER"
+
+
+class MatchEventSource(StrEnum):
+    MANUAL = "MANUAL"
+    OFFICIAL_REPORT = "OFFICIAL_REPORT"
+    VIDEO_REVIEW = "VIDEO_REVIEW"
+    OTHER = "OTHER"
+
+
+class SubstitutionReason(StrEnum):
+    TACTICAL = "TACTICAL"
+    INJURY = "INJURY"
+    REST = "REST"
+    OTHER = "OTHER"

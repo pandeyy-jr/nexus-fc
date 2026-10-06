@@ -1,0 +1,35 @@
+# Environment and secrets
+.env
+.env.*
+!.env.example
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+*.egg-info/
+
+# Test and lint caches
+.pytest_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+# Databases and logs
+*.db
+*.sqlite
+*.sqlite3
+*.log
+
+# Node and build artifacts
+node_modules/
+dist/
+build/
+
+# IDE and local configuration
+.idea/
+.vscode/
+
+# Local runtime media
+var/videos/

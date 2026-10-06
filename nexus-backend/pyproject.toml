@@ -1,0 +1,16 @@
+[project]
+name = "nexus-backend"
+version = "0.1.0"
+description = "Evidence-driven football club operating system backend"
+requires-python = ">=3.12"
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["tests"]
+
+[tool.ruff]
+line-length = 88
+target-version = "py312"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B"]

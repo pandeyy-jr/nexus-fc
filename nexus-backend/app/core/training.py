@@ -1,0 +1,58 @@
+from enum import StrEnum
+
+
+class TrainingSessionType(StrEnum):
+    RECOVERY = "RECOVERY"
+    TECHNICAL = "TECHNICAL"
+    TACTICAL = "TACTICAL"
+    FITNESS = "FITNESS"
+    MATCH_PREPARATION = "MATCH_PREPARATION"
+    RECOVERY_AFTER_MATCH = "RECOVERY_AFTER_MATCH"
+    INDIVIDUAL = "INDIVIDUAL"
+    OTHER = "OTHER"
+
+
+class AttendanceStatus(StrEnum):
+    PLANNED = "PLANNED"
+    ATTENDED = "ATTENDED"
+    PARTIAL = "PARTIAL"
+    ABSENT = "ABSENT"
+    EXCUSED = "EXCUSED"
+
+
+class AvailabilityStatus(StrEnum):
+    AVAILABLE = "AVAILABLE"
+    LIMITED = "LIMITED"
+    UNAVAILABLE = "UNAVAILABLE"
+
+
+class AvailabilityReasonCategory(StrEnum):
+    COACHING = "COACHING"
+    REST = "REST"
+    SUSPENSION = "SUSPENSION"
+    ADMINISTRATIVE = "ADMINISTRATIVE"
+    MEDICAL_RESTRICTION = "MEDICAL_RESTRICTION"
+    OTHER = "OTHER"
+
+
+class DevelopmentCategory(StrEnum):
+    TECHNICAL = "TECHNICAL"
+    TACTICAL = "TACTICAL"
+    PHYSICAL = "PHYSICAL"
+    MENTAL = "MENTAL"
+    POSITIONAL = "POSITIONAL"
+    OTHER = "OTHER"
+
+
+class DevelopmentStatus(StrEnum):
+    NOT_STARTED = "NOT_STARTED"
+    IN_PROGRESS = "IN_PROGRESS"
+    COMPLETED = "COMPLETED"
+    PAUSED = "PAUSED"
+    CANCELLED = "CANCELLED"
+
+
+class DevelopmentPriority(StrEnum):
+    LOW = "LOW"
+    MEDIUM = "MEDIUM"
+    HIGH = "HIGH"
