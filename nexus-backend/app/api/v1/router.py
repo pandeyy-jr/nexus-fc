@@ -4,6 +4,7 @@ from app.api.v1.endpoints import (
     auth,
     availability,
     copilot,
+    counterfactual,
     development,
     health,
     info,
@@ -36,3 +37,6 @@ api_router.include_router(videos.router, prefix="/matches", tags=["videos"])
 api_router.include_router(matches.router, prefix="/matches", tags=["matches"])
 api_router.include_router(memory.router, prefix="/memory", tags=["memory"])
 api_router.include_router(copilot.router, prefix="/ai", tags=["copilot"])
+api_router.include_router(
+    counterfactual.router, prefix="/counterfactual", tags=["counterfactual"]
+)
