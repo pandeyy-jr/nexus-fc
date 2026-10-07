@@ -384,6 +384,105 @@ class DecisionReplay(BaseModel):
     warnings: list[str] = Field(default_factory=list)
 
 
+class EvaluationStatus(StrEnum):
+    """Structured evaluability status.
+
+    Never a verdict on decision quality — only whether the recorded,
+    governance-filtered facts support a factual comparison.
+    """
+
+    EVALUABLE = "EVALUABLE"
+    PARTIALLY_EVALUABLE = "PARTIALLY_EVALUABLE"
+    INSUFFICIENT_EVIDENCE = "INSUFFICIENT_EVIDENCE"
+    CONFLICTING_EVIDENCE = "CONFLICTING_EVIDENCE"
+
+
+class RecommendationRelation(StrEnum):
+    """Factual relationship between the recorded AI recommendation and
+    the recorded human decision.
+
+    Mirrors what the record says the human did with the recommendation;
+    it never judges either the human act or the AI output."""
+
+    RECOMMENDATION_ACCEPTED = "RECOMMENDATION_ACCEPTED"
+    RECOMMENDATION_REJECTED = "RECOMMENDATION_REJECTED"
+    RECOMMENDATION_MODIFIED = "RECOMMENDATION_MODIFIED"
+    RECOMMENDATION_DEFERRED = "RECOMMENDATION_DEFERRED"
+    RECOMMENDATION_NO_ACTION = "RECOMMENDATION_NO_ACTION"
+    NO_RECOMMENDATION_RECORDED = "NO_RECOMMENDATION_RECORDED"
+    NO_HUMAN_DECISION_RECORDED = "NO_HUMAN_DECISION_RECORDED"
+
+
+class EvaluationObservationCode(StrEnum):
+    """Machine-readable factual observation. Descriptive only."""
+
+    DECISION_TIME_EVIDENCE_PRESENT = "DECISION_TIME_EVIDENCE_PRESENT"
+    DECISION_TIME_EVIDENCE_ABSENT = "DECISION_TIME_EVIDENCE_ABSENT"
+    OUTCOME_EVIDENCE_PRESENT = "OUTCOME_EVIDENCE_PRESENT"
+    OUTCOME_EVIDENCE_ABSENT = "OUTCOME_EVIDENCE_ABSENT"
+    CONFLICTING_OUTCOME_EVIDENCE = "CONFLICTING_OUTCOME_EVIDENCE"
+    LINKED_EVIDENCE_UNAVAILABLE = "LINKED_EVIDENCE_UNAVAILABLE"
+    MISSING_LINKED_REFERENCE = "MISSING_LINKED_REFERENCE"
+    NO_USABLE_EVIDENCE = "NO_USABLE_EVIDENCE"
+
+
+class EvaluationObservation(BaseModel):
+    """One factual observation, traceable to its underlying evidence IDs."""
+
+    model_config = ConfigDict(extra="forbid", frozen=True)
+
+    code: EvaluationObservationCode
+    detail: str = Field(min_length=1, max_length=500)
+    evidence_ids: list[UUID] = Field(default_factory=list)
+
+
+class EvaluationMetadata(BaseModel):
+    """Provenance of the evaluation computation itself.
+
+    Deterministic: contains no wall-clock value, so repeated evaluation
+    of unchanged input is equivalent. Confidence remains unknown unless
+    an existing source already provides a legitimate value — none does,
+    so it stays NULL rather than being fabricated."""
+
+    model_config = ConfigDict(extra="forbid", frozen=True)
+
+    method: str = "deterministic-structured-comparison"
+    basis: str = "decision_replay_reconstruction"
+    llm_used: bool = False
+    confidence: float | None = None
+
+
+class DecisionReplayEvaluation(BaseModel):
+    """Structured, evidence-based evaluation of a decision replay.
+
+    Describes relationships between recorded facts: what existed at
+    decision time, what the human did relative to the AI recommendation,
+    and what outcomes were observed later. Never a coaching verdict —
+    no causal, counterfactual, or hindsight judgment. AI recommendation,
+    human decision, and outcome remain separate fields and are never
+    merged into a single "decision result"."""
+
+    model_config = ConfigDict(extra="forbid", frozen=True)
+
+    decision_id: UUID
+    decision_type: DecisionType
+    decision_time: datetime
+    decision_maker: UUID | None = None
+
+    status: EvaluationStatus
+    recommendation_relation: RecommendationRelation
+
+    ai_recommendation: ReplayAIRecommendation | None = None
+    human_decision: ReplayHumanDecision | None = None
+    decision_time_evidence: list[ReplayEvidenceItem] = Field(default_factory=list)
+    outcome_references: list[ReplayOutcomeReference] = Field(default_factory=list)
+
+    observations: list[EvaluationObservation] = Field(default_factory=list)
+    metadata: EvaluationMetadata
+    provenance: dict[str, str] = Field(default_factory=dict)
+    warnings: list[str] = Field(default_factory=list)
+
+
 class RetrievalQuery(BaseModel):
     """Explicit retrieval request. ``text`` is accepted as a
     future-compatible field only — the database backend matches on

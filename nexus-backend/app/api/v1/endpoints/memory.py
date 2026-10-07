@@ -12,6 +12,7 @@ from app.schemas.memory import (
     DecisionCreate,
     DecisionReplay,
     DecisionReplayCreate,
+    DecisionReplayEvaluation,
     DecisionReplayView,
     DecisionView,
     EvidenceCreate,
@@ -169,6 +170,27 @@ async def get_decision_replay_reconstruction(
     inaccessible or missing data.
     """
     return await club_memory.reconstruct_decision_replay(session, actor, replay_id)
+
+
+@router.get(
+    "/decisions/replay/{replay_id}/evaluation",
+    response_model=DecisionReplayEvaluation,
+)
+async def get_decision_replay_evaluation(
+    replay_id: UUID,
+    session: SessionDependency,
+    actor: CurrentUser,
+) -> DecisionReplayEvaluation:
+    """Deterministic, evidence-based evaluation of a decision replay.
+
+    Derives factual observations from the governed reconstruction:
+    what evidence existed at decision time, what the human did relative
+    to the AI recommendation, and what outcomes were observed. It never
+    judges decision quality, never infers causality, and computes no
+    confidence. Read-only; governance is applied by the reconstruction
+    choke point it reuses.
+    """
+    return await club_memory.evaluate_decision_replay(session, actor, replay_id)
 
 
 @router.get("/decisions/{decision_id}", response_model=DecisionView)

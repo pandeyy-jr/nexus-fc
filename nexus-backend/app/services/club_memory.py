@@ -1,3 +1,4 @@
+import json
 from datetime import UTC, datetime
 from uuid import UUID
 
@@ -19,12 +20,18 @@ from app.schemas.memory import (
     DecisionCreate,
     DecisionReplay,
     DecisionReplayCreate,
+    DecisionReplayEvaluation,
     DecisionReplayView,
     DecisionView,
+    EvaluationMetadata,
+    EvaluationObservation,
+    EvaluationObservationCode,
+    EvaluationStatus,
     EvidenceCreate,
     EvidenceView,
     MemoryCreate,
     MemoryView,
+    RecommendationRelation,
     ReplayAIRecommendation,
     ReplayEvidenceItem,
     ReplayHumanDecision,
@@ -38,6 +45,22 @@ from app.services.memory_governance import can_retrieve
 
 def _not_found(detail: str) -> HTTPException:
     return HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=detail)
+
+
+def _parse_reference_ids(value: str | None) -> list[UUID] | None:
+    """Parse a stored JSON list of UUID strings.
+
+    Returns ``None`` when a stored value exists but is unreadable, so
+    callers can distinguish "no links recorded" from "links recorded but
+    unparseable" and surface a controlled warning instead of silently
+    pretending the links never existed.
+    """
+    if not value:
+        return []
+    try:
+        return [UUID(item) for item in json.loads(value)]
+    except (json.JSONDecodeError, ValueError, TypeError, AttributeError):
+        return None
 
 
 async def record_memory(
@@ -432,16 +455,12 @@ async def reconstruct_decision_replay(
 
     # Parse stored JSON UUID lists. Invalid stored references warn instead
     # of silently disappearing.
-    import json
-
     def parse_uuid_list(label: str, value: str | None) -> list[UUID]:
-        if not value:
-            return []
-        try:
-            return [UUID(u) for u in json.loads(value)]
-        except (json.JSONDecodeError, ValueError, TypeError):
+        parsed = _parse_reference_ids(value)
+        if parsed is None:
             warnings.append(f"Stored {label} references could not be parsed")
             return []
+        return parsed
 
     evidence_ids = parse_uuid_list("evidence", record.evidence_ids)
     outcome_evidence_ids = parse_uuid_list(
@@ -692,5 +711,193 @@ async def reconstruct_decision_replay(
         evidence=evidence_items,
         outcome_references=outcome_refs,
         provenance=provenance,
+        warnings=warnings,
+    )
+
+
+_HUMAN_DECISION_RELATIONS: dict[HumanDecision, RecommendationRelation] = {
+    HumanDecision.ACCEPTED: RecommendationRelation.RECOMMENDATION_ACCEPTED,
+    HumanDecision.REJECTED: RecommendationRelation.RECOMMENDATION_REJECTED,
+    HumanDecision.MODIFIED: RecommendationRelation.RECOMMENDATION_MODIFIED,
+    HumanDecision.DEFERRED: RecommendationRelation.RECOMMENDATION_DEFERRED,
+    HumanDecision.NO_ACTION: RecommendationRelation.RECOMMENDATION_NO_ACTION,
+}
+
+
+def _recommendation_relation(
+    ai: ReplayAIRecommendation | None,
+    human: ReplayHumanDecision | None,
+) -> RecommendationRelation:
+    """Factual relationship between AI recommendation and human decision.
+
+    Presence and recorded-enum mapping only — mirrors what the record
+    says the human did with the recommendation; it never evaluates
+    whether either the human act or the AI output was right or wrong.
+    """
+    if ai is None:
+        return RecommendationRelation.NO_RECOMMENDATION_RECORDED
+    if human is None or human.decision is None:
+        return RecommendationRelation.NO_HUMAN_DECISION_RECORDED
+    return _HUMAN_DECISION_RELATIONS[human.decision]
+
+
+async def evaluate_decision_replay(
+    session: AsyncSession, actor: User, replay_id: UUID
+) -> DecisionReplayEvaluation:
+    """Deterministic, evidence-based evaluation of a decision replay.
+
+    Derives structured factual observations from the governed
+    reconstruction: what evidence existed at decision time, what the
+    human did relative to the AI recommendation, and what outcome
+    evidence was observed later. Decision Replay describes what
+    happened — it never decides whether the decision was good or bad.
+
+    Guarantees:
+    - read-only: the stored replay record is never modified;
+    - governance: only evidence this actor may retrieve can influence
+      any observation; unavailable items are counted without exposing
+      their contents or the reason for restriction;
+    - temporal integrity: post-decision evidence never enters the
+      decision-time evidence set;
+    - determinism: no wall-clock values and stable ordering
+      (timestamp → evidence ID), so repeated evaluation is equivalent;
+    - no LLM, no causal inference, no fabricated confidence.
+    """
+    recon = await reconstruct_decision_replay(session, actor, replay_id)
+    record = await memory.get_decision_replay(session, replay_id)
+    if record is None:  # defensive: replay removed between reads
+        raise _not_found("Decision replay not found")
+
+    warnings = list(recon.warnings)
+
+    def _stored_ids(value: str | None) -> list[UUID]:
+        # A malformed stored list already surfaced a controlled warning
+        # during reconstruction; here it simply contributes no links.
+        parsed = _parse_reference_ids(value)
+        return parsed if parsed is not None else []
+
+    stored_ids = (
+        _stored_ids(record.evidence_ids)
+        + _stored_ids(record.outcome_evidence_ids)
+        + _stored_ids(record.ai_cited_evidence_ids)
+    )
+    stored_outcome_ids = set(_stored_ids(record.outcome_evidence_ids))
+
+    by_id = {ev.evidence_id: ev for ev in recon.evidence}
+    missing_ids = sorted({sid for sid in stored_ids if sid not in by_id}, key=str)
+
+    # A linked outcome whose record time is not after the decision makes
+    # the stored record temporally self-contradictory — a factual
+    # conflict observation, never a judgment about the decision itself.
+    conflicted_ids = sorted(
+        (
+            sid
+            for sid in stored_outcome_ids
+            if sid in by_id
+            and by_id[sid].temporal_relation != TemporalRelation.AFTER_DECISION
+        ),
+        key=str,
+    )
+
+    accessible = [ev for ev in recon.evidence if ev.governance_status == "allowed"]
+    withheld_count = len(recon.evidence) - len(accessible)
+
+    decision_time_evidence = sorted(
+        (ev for ev in accessible if ev.is_decision_time_evidence),
+        key=lambda ev: (ev.created_at, str(ev.evidence_id)),
+    )
+    # Already governance-filtered and deterministically sorted
+    # (timestamp → evidence ID) by the reconstruction.
+    outcome_refs = list(recon.outcome_references)
+
+    human_decision = recon.human_decision
+    human_missing = human_decision is None or human_decision.decision is None
+
+    if conflicted_ids:
+        eval_status = EvaluationStatus.CONFLICTING_EVIDENCE
+    elif withheld_count or missing_ids or human_missing:
+        eval_status = EvaluationStatus.PARTIALLY_EVALUABLE
+    elif not decision_time_evidence and not outcome_refs:
+        eval_status = EvaluationStatus.INSUFFICIENT_EVIDENCE
+    else:
+        eval_status = EvaluationStatus.EVALUABLE
+
+    observations: list[EvaluationObservation] = []
+
+    def _observe(
+        code: EvaluationObservationCode, detail: str, ids: list[UUID] | None = None
+    ) -> None:
+        observations.append(
+            EvaluationObservation(
+                code=code,
+                detail=detail,
+                evidence_ids=sorted(ids or [], key=str),
+            )
+        )
+
+    if decision_time_evidence:
+        _observe(
+            EvaluationObservationCode.DECISION_TIME_EVIDENCE_PRESENT,
+            f"{len(decision_time_evidence)} evidence item(s) available at "
+            "decision time",
+            [ev.evidence_id for ev in decision_time_evidence],
+        )
+    else:
+        _observe(
+            EvaluationObservationCode.DECISION_TIME_EVIDENCE_ABSENT,
+            "No evidence was available at decision time",
+        )
+
+    if outcome_refs:
+        _observe(
+            EvaluationObservationCode.OUTCOME_EVIDENCE_PRESENT,
+            f"{len(outcome_refs)} linked outcome item(s) recorded after the decision",
+            [ref.evidence_id for ref in outcome_refs],
+        )
+    else:
+        _observe(
+            EvaluationObservationCode.OUTCOME_EVIDENCE_ABSENT,
+            "No outcome evidence is linked to this decision",
+        )
+
+    if conflicted_ids:
+        _observe(
+            EvaluationObservationCode.CONFLICTING_OUTCOME_EVIDENCE,
+            "Linked outcome item(s) are not recorded after the decision",
+            conflicted_ids,
+        )
+    if withheld_count:
+        _observe(
+            EvaluationObservationCode.LINKED_EVIDENCE_UNAVAILABLE,
+            f"{withheld_count} linked evidence item(s) are unavailable to this user",
+        )
+    if missing_ids:
+        _observe(
+            EvaluationObservationCode.MISSING_LINKED_REFERENCE,
+            f"{len(missing_ids)} stored evidence reference(s) could not be resolved",
+            missing_ids,
+        )
+    if not decision_time_evidence and not outcome_refs:
+        _observe(
+            EvaluationObservationCode.NO_USABLE_EVIDENCE,
+            "No decision-time or outcome evidence is available for evaluation",
+        )
+
+    return DecisionReplayEvaluation(
+        decision_id=recon.decision_id,
+        decision_type=recon.decision_type,
+        decision_time=recon.decision_time,
+        decision_maker=recon.decision_maker,
+        status=eval_status,
+        recommendation_relation=_recommendation_relation(
+            recon.ai_recommendation, human_decision
+        ),
+        ai_recommendation=recon.ai_recommendation,
+        human_decision=human_decision,
+        decision_time_evidence=decision_time_evidence,
+        outcome_references=outcome_refs,
+        observations=observations,
+        metadata=EvaluationMetadata(),
+        provenance=dict(recon.provenance),
         warnings=warnings,
     )
