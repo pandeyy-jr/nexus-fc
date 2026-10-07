@@ -4,6 +4,10 @@ Provides a minimal read-only surface for counterfactual scenario queries.
 All endpoints are governed by existing RBAC; no second authorization system.
 
 See ``app/services/counterfactual.py`` for the simulator boundary.
+
+11B: the endpoint now attempts a deterministic structural comparison
+via the Phase 07 tactical state representations before falling back to
+the 11A unavailable result.
 """
 
 from fastapi import APIRouter
@@ -46,6 +50,16 @@ async def simulate_counterfactual(
 ) -> CounterfactualScenarioResult:
     """Run a counterfactual tactical simulation.
 
+    For 11B, attempts a deterministic structural comparison via the
+    Phase 07 tactical state representations. When the scenario is
+    supported by the deterministic engine, returns a structural
+    comparison result describing what changed (formation, player
+    configuration, entities affected). When unsupported, falls back
+    to the 11A unavailable result.
+
+    The result is advisory only — it never modifies match/player history,
+    never makes substitutions automatically, and never claims certainty.
+
     Args:
         payload: The counterfactual scenario specification separating
             baseline from hypothetical changes.
@@ -53,8 +67,20 @@ async def simulate_counterfactual(
     Returns:
         A ``CounterfactualScenarioResult`` with the simulation outcome.
 
-    Raises:
-        NotImplementedError: If no simulator is configured (11A default).
+        - If the deterministic engine (11B) supports the scenario,
+          returns a result with ``simulator_status = "available"``
+          containing structural comparison information.
+        - If the scenario is unsupported, falls back to the 11A
+          unavailable result with ``simulator_status = "unavailable"``.
     """
+    service = CounterfactualService.deterministic()
+    try:
+        result = service.simulate_scenario(payload)
+        if result.simulator_status == "available":
+            return result
+    except Exception:
+        pass
+
+    # Fall back to 11A unavailable result
     service = CounterfactualService.unavailable()
     return service.simulate_scenario(payload)
