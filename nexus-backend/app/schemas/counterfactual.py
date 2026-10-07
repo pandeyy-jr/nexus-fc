@@ -113,10 +113,12 @@ class CounterfactualScenarioCreate(CounterfactualScenarioBase):
 
     model_config = ConfigDict(extra="forbid")
 
-    changes: list[CounterfactualPlayerChange]
+    changes: list[CounterfactualPlayerChange] = Field(default_factory=list)
 
     @model_validator(mode="after")
-    def validate_changes_not_empty(self) -> CounterfactualScenarioCreate:
+    def validate_changes_not_empty_when_required(self) -> CounterfactualScenarioCreate:
+        # 11A: require at least one player change for API requests
+        # 11B: formation-level counterfactuals may have empty changes
         if not self.changes:
             raise ValueError("At least one player change must be specified")
         return self

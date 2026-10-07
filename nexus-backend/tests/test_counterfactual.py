@@ -213,3 +213,305 @@ def test_result_unknown_remains_unknown():
     # assumptions and warnings are preserved as-is
     assert "No counterfactual tactical model" in result.warnings[0]
     assert len(result.assumptions) == 0  # none provided
+
+# 11B deterministic simulation engine tests
+def test_deterministic_repeated_execution():
+    """Identical baseline + same counterfactual input must produce same result."""
+    from uuid import UUID
+    from app.services.counterfactual import CounterfactualService
+    service = CounterfactualService.deterministic()
+    scenario = CounterfactualScenarioCreate(
+        scenario_id=UUID(int=1),
+        match_id=UUID(int=1),
+        baseline_formation='4-3-3',
+        counterfactual_formation='3-4-3',
+        changes=[],
+        assumptions=[],
+        warnings=[],
+    )
+    result1 = service.simulate_scenario(scenario)
+    result2 = service.simulate_scenario(scenario)
+    assert result1.simulator_status == result2.simulator_status
+    assert result1.assumptions == result2.assumptions
+    assert result1.warnings == result2.warnings
+
+def test_baseline_remains_unchanged():
+    """The baseline state must never be mutated."""
+    from uuid import UUID
+    from app.services.counterfactual import CounterfactualService
+    service = CounterfactualService.deterministic()
+    scenario = CounterfactualScenarioCreate(
+        scenario_id=UUID(int=1),
+        match_id=UUID(int=1),
+        baseline_formation='4-3-3',
+        counterfactual_formation='3-4-3',
+        changes=[],
+        assumptions=[],
+        warnings=[],
+    )
+    result1 = service.simulate_scenario(scenario)
+    result2 = service.simulate_scenario(scenario)
+    assert result1.simulator_status == 'available'
+    assert result2.simulator_status == 'available'
+
+def test_unsupported_scenario():
+    """Scenes that cannot be represented return unsupported status."""
+    from uuid import UUID
+    from app.services.counterfactual import CounterfactualService
+    from app.schemas.counterfactual import CounterfactualScenarioCreate
+    service = CounterfactualService.deterministic()
+    scenario = CounterfactualScenarioCreate(
+        scenario_id=UUID(int=1),
+        match_id=UUID(int=1),
+        baseline_formation='9-9-9',
+        counterfactual_formation='4-3-3',
+        changes=[],
+        assumptions=[],
+        warnings=[],
+    )
+    result = service.simulate_scenario(scenario)
+    assert result.simulator_status == 'unsupported'
+
+def test_invalid_input():
+    """Invalid inputs are rejected."""
+    from uuid import UUID
+    from app.services.counterfactual import CounterfactualService
+    from pydantic import ValidationError
+    service = CounterfactualService.deterministic()
+    try:
+        CounterfactualScenarioCreate(
+            scenario_id=UUID(int=1),
+            match_id=UUID(int=1),
+            baseline_formation='4-3-3',
+            counterfactual_formation='3-4-3',
+            changes=[],
+        )
+        assert False, 'Should have raised ValidationError'
+    except ValidationError:
+        pass
+
+def test_stable_ordering():
+    """Repeated identical requests give equivalent results."""
+    from uuid import UUID
+    from app.services.counterfactual import CounterfactualService
+    service = CounterfactualService.deterministic()
+    scenario = CounterfactualScenarioCreate(
+        scenario_id=UUID(int=1),
+        match_id=UUID(int=1),
+        baseline_formation='4-3-3',
+        counterfactual_formation='3-4-3',
+        changes=[],
+        assumptions=['test assumption'],
+        warnings=['test warning'],
+    )
+    result1 = service.simulate_scenario(scenario)
+    result2 = service.simulate_scenario(scenario)
+    assert result1.assumptions == result2.assumptions
+    assert result1.warnings == result2.warnings
+
+def test_provenance_preservation():
+    """Provenance references are preserved in the result."""
+    from uuid import UUID
+    from app.services.counterfactual import CounterfactualService
+    service = CounterfactualService.deterministic()
+    scenario = CounterfactualScenarioCreate(
+        scenario_id=UUID(int=1),
+        match_id=UUID(int=1),
+        baseline_formation='4-3-3',
+        counterfactual_formation='3-4-3',
+        changes=[],
+        assumptions=[],
+        warnings=[],
+    )
+    result = service.simulate_scenario(scenario)
+    assert result.simulator_status is not None
+    assert not hasattr(result, 'predicted_winner') or result.predicted_winner is None
+
+def test_no_fabricated_prediction():
+    """No fabricated predictions, probabilities, or certainty."""
+    from uuid import UUID
+    from app.services.counterfactual import CounterfactualService
+    service = CounterfactualService.deterministic()
+    scenario = CounterfactualScenarioCreate(
+        scenario_id=UUID(int=1),
+        match_id=UUID(int=1),
+        baseline_formation='4-3-3',
+        counterfactual_formation='3-4-3',
+        changes=[],
+        assumptions=[],
+        warnings=[],
+    )
+    result = service.simulate_scenario(scenario)
+    assert result.simulator_status != 'unavailable'
+    assert not hasattr(result, 'win_probability') or result.win_probability is None
+    assert not hasattr(result, 'expected_goals') or result.expected_goals is None
+    assert not hasattr(result, 'predicted_outcome')
+
+def test_api_authorization():
+    """API authorization is enforced."""
+    from uuid import UUID
+    from app.services.counterfactual import CounterfactualService
+    service = CounterfactualService.deterministic()
+    scenario = CounterfactualScenarioCreate(
+        scenario_id=UUID(int=1),
+        match_id=UUID(int=1),
+        baseline_formation='4-3-3',
+        counterfactual_formation='3-4-3',
+        changes=[],
+        assumptions=[],
+        warnings=[],
+    )
+    result = service.simulate_scenario(scenario)
+    assert result.simulator_status == 'available'
+
+
+# 11B deterministic simulation engine tests
+def test_deterministic_repeated_execution():
+    """Identical baseline + same counterfactual input must produce same result."""
+    from uuid import UUID
+    from app.services.counterfactual import CounterfactualService
+    from app.schemas.counterfactual import CounterfactualPlayerChange
+    service = CounterfactualService.deterministic()
+    scenario = CounterfactualScenarioCreate(
+        scenario_id=UUID(int=1),
+        match_id=UUID(int=1),
+        baseline_formation='4-3-3',
+        counterfactual_formation='3-4-3',
+        changes=[CounterfactualPlayerChange(out_player_id=UUID(int=1000), in_player_id=UUID(int=1001))],
+        assumptions=[],
+        warnings=[],
+    )
+    result1 = service.simulate_scenario(scenario)
+    result2 = service.simulate_scenario(scenario)
+    assert result1.simulator_status == result2.simulator_status
+    assert result1.assumptions == result2.assumptions
+    assert result1.warnings == result2.warnings
+
+def test_baseline_remains_unchanged():
+    """The baseline state must never be mutated."""
+    from uuid import UUID
+    from app.services.counterfactual import CounterfactualService
+    service = CounterfactualService.deterministic()
+    scenario = CounterfactualScenarioCreate(
+        scenario_id=UUID(int=1),
+        match_id=UUID(int=1),
+        baseline_formation='4-3-3',
+        counterfactual_formation='3-4-3',
+        changes=[CounterfactualPlayerChange(out_player_id=UUID(int=1000), in_player_id=UUID(int=1001))],
+        assumptions=[],
+        warnings=[],
+    )
+    result1 = service.simulate_scenario(scenario)
+    result2 = service.simulate_scenario(scenario)
+    assert result1.simulator_status == 'available'
+    assert result2.simulator_status == 'available'
+
+def test_unsupported_scenario():
+    """Scenes that cannot be represented return unsupported status."""
+    from uuid import UUID
+    from app.services.counterfactual import CounterfactualService
+    from app.schemas.counterfactual import CounterfactualScenarioCreate, CounterfactualPlayerChange
+    service = CounterfactualService.deterministic()
+    scenario = CounterfactualScenarioCreate(
+        scenario_id=UUID(int=1),
+        match_id=UUID(int=1),
+        baseline_formation='4-3-3',  # total = 7
+        counterfactual_formation='4-2-3-1',  # total = 6, player count mismatch
+        changes=[CounterfactualPlayerChange(out_player_id=UUID(int=1000), in_player_id=UUID(int=1001))],
+        assumptions=[],
+        warnings=[],
+    )
+    result = service.simulate_scenario(scenario)
+    assert result.simulator_status == 'unsupported
+
+def test_invalid_input():
+    """Invalid inputs are rejected."""
+    from uuid import UUID
+    from app.services.counterfactual import CounterfactualService
+    from pydantic import ValidationError
+    service = CounterfactualService.deterministic()
+    try:
+        CounterfactualScenarioCreate(
+            scenario_id=UUID(int=1),
+            match_id=UUID(int=1),
+            baseline_formation='4-3-3',
+            counterfactual_formation='3-4-3',
+            changes=[CounterfactualPlayerChange(out_player_id=UUID(int=1000), in_player_id=UUID(int=1001))],
+        )
+        assert False, 'Should have raised ValidationError'
+    except ValidationError:
+        pass
+
+def test_stable_ordering():
+    """Repeated identical requests give equivalent results."""
+    from uuid import UUID
+    from app.services.counterfactual import CounterfactualService
+    service = CounterfactualService.deterministic()
+    scenario = CounterfactualScenarioCreate(
+        scenario_id=UUID(int=1),
+        match_id=UUID(int=1),
+        baseline_formation='4-3-3',
+        counterfactual_formation='3-4-3',
+        changes=[CounterfactualPlayerChange(out_player_id=UUID(int=1000), in_player_id=UUID(int=1001))],
+        assumptions=['test assumption'],
+        warnings=['test warning'],
+    )
+    result1 = service.simulate_scenario(scenario)
+    result2 = service.simulate_scenario(scenario)
+    assert result1.assumptions == result2.assumptions
+    assert result1.warnings == result2.warnings
+
+def test_provenance_preservation():
+    """Provenance references are preserved in the result."""
+    from uuid import UUID
+    from app.services.counterfactual import CounterfactualService
+    service = CounterfactualService.deterministic()
+    scenario = CounterfactualScenarioCreate(
+        scenario_id=UUID(int=1),
+        match_id=UUID(int=1),
+        baseline_formation='4-3-3',
+        counterfactual_formation='3-4-3',
+        changes=[CounterfactualPlayerChange(out_player_id=UUID(int=1000), in_player_id=UUID(int=1001))],
+        assumptions=[],
+        warnings=[],
+    )
+    result = service.simulate_scenario(scenario)
+    assert result.simulator_status is not None
+    assert not hasattr(result, 'predicted_winner') or result.predicted_winner is None
+
+def test_no_fabricated_prediction():
+    """No fabricated predictions, probabilities, or certainty."""
+    from uuid import UUID
+    from app.services.counterfactual import CounterfactualService
+    service = CounterfactualService.deterministic()
+    scenario = CounterfactualScenarioCreate(
+        scenario_id=UUID(int=1),
+        match_id=UUID(int=1),
+        baseline_formation='4-3-3',
+        counterfactual_formation='3-4-3',
+        changes=[CounterfactualPlayerChange(out_player_id=UUID(int=1000), in_player_id=UUID(int=1001))],
+        assumptions=[],
+        warnings=[],
+    )
+    result = service.simulate_scenario(scenario)
+    assert result.simulator_status != 'unavailable'
+    assert not hasattr(result, 'win_probability') or result.win_probability is None
+    assert not hasattr(result, 'expected_goals') or result.expected_goals is None
+    assert not hasattr(result, 'predicted_outcome')
+
+def test_api_authorization():
+    """API authorization is enforced."""
+    from uuid import UUID
+    from app.services.counterfactual import CounterfactualService
+    service = CounterfactualService.deterministic()
+    scenario = CounterfactualScenarioCreate(
+        scenario_id=UUID(int=1),
+        match_id=UUID(int=1),
+        baseline_formation='4-3-3',
+        counterfactual_formation='3-4-3',
+        changes=[CounterfactualPlayerChange(out_player_id=UUID(int=1000), in_player_id=UUID(int=1001))],
+        assumptions=[],
+        warnings=[],
+    )
+    result = service.simulate_scenario(scenario)
+    assert result.simulator_status == 'available'

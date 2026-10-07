@@ -229,7 +229,7 @@ class CounterfactualService:
 
     @classmethod
     def deterministic(cls) -> CounterfactualService:
-        return cls(CounterfactualSimulator._det_inner())
+        return cls(CounterfactualService._det_inner())
 
     @property
     def is_available(self) -> bool:
@@ -250,7 +250,7 @@ class CounterfactualService:
         # Directly delegate to the simulator to avoid recursion
         return self._simulator.simulate(scenario_create)
 
-    _det_sim = staticmethod(lambda sc: _det_analysis(scenario))
+    _det_sim = staticmethod(lambda sc: _det_analysis(sc))
 
 
 def _det_analysis(scenario: CounterfactualScenarioCreate) -> CounterfactualScenarioResult:
@@ -289,7 +289,7 @@ def _det_analysis(scenario: CounterfactualScenarioCreate) -> CounterfactualScena
         home_p.append(
             TacticalPlayerState(
                 track_id=f"det_h_{i}", player_id=UUID(int=1000 + i),
-                identity_verified=False, team=_Tat.HOME, object_class=None,
+                identity_verified=True, team=_Tat.HOME, object_class='PLAYER',
                 pitch_x=float(i * 0.1) if i < 5 else None, pitch_y=0.5 if i < 5 else None,
                 validity=_Pvl.VALID, object_confidence=0.8,
                 frame_index=0, timestamp_seconds=0.0,
@@ -305,7 +305,7 @@ def _det_analysis(scenario: CounterfactualScenarioCreate) -> CounterfactualScena
         away_p.append(
             TacticalPlayerState(
                 track_id=f"det_a_{i}", player_id=UUID(int=2000 + i),
-                identity_verified=False, team=_Tat.AWAY, object_class=None,
+                identity_verified=True, team=_Tat.AWAY, object_class='PLAYER',
                 pitch_x=float(i * 0.1) if i < 5 else None, pitch_y=0.5 if i < 5 else None,
                 validity=_Pvl.VALID, object_confidence=0.8,
                 frame_index=0, timestamp_seconds=0.0,
@@ -320,7 +320,7 @@ def _det_analysis(scenario: CounterfactualScenarioCreate) -> CounterfactualScena
     ball = None
     if total >= 4:
         ball = TacticalBallState(
-            track_id="det_ball", object_class=None, pitch_x=0.5, pitch_y=0.5,
+            track_id="det_ball", object_class='BALL', pitch_x=0.5, pitch_y=0.5,
             validity=_Pvl.VALID, object_confidence=0.9,
             frame_index=0, timestamp_seconds=0.0,
             match_id=match_id, source_id=src_id,
