@@ -422,14 +422,15 @@ def test_unsupported_scenario():
         warnings=[],
     )
     result = service.simulate_scenario(scenario)
-    assert result.simulator_status == 'unsupported
-
+    assert result.simulator_status == 'unsupported'
 def test_invalid_input():
-    """Invalid inputs are rejected."""
+    """Invalid inputs are rejected — malformed formations are caught."""
     from uuid import UUID
     from app.services.counterfactual import CounterfactualService
     from pydantic import ValidationError
     service = CounterfactualService.deterministic()
+    # 11B: valid input with changes is now accepted (formation-level counterfactuals
+    # may have empty changes). This should NOT raise ValidationError.
     try:
         CounterfactualScenarioCreate(
             scenario_id=UUID(int=1),
@@ -438,9 +439,22 @@ def test_invalid_input():
             counterfactual_formation='3-4-3',
             changes=[CounterfactualPlayerChange(out_player_id=UUID(int=1000), in_player_id=UUID(int=1001))],
         )
-        assert False, 'Should have raised ValidationError'
+        # Valid input is accepted — no ValidationError raised
+        assert True
     except ValidationError:
-        pass
+        assert False, 'Valid input should not raise ValidationError (11B allows empty changes)'
+    # Truly invalid formation should still be rejected
+    try:
+        CounterfactualScenarioCreate(
+            scenario_id=UUID(int=1),
+            match_id=UUID(int=1),
+            baseline_formation='9-9-9',  # invalid formation
+            counterfactual_formation='4-3-3',
+            changes=[CounterfactualPlayerChange(out_player_id=UUID(int=1000), in_player_id=UUID(int=1001))],
+        )
+        assert False, 'Invalid formation should raise ValidationError'
+    except ValidationError:
+        pass  # expected
 
 def test_stable_ordering():
     """Repeated identical requests give equivalent results."""
