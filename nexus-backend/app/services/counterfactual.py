@@ -93,7 +93,13 @@ class _DeterministicEngine:
     def _valid(fmt: str) -> bool:
         return fmt in VALID_FORMATIONS
 
-    def analyze(self, baseline: TacticalSequence, scenario: CounterfactualScenarioCreate) -> CounterfactualScenarioResult:
+    def analyze(
+        self,
+        baseline: TacticalSequence,
+        scenario: CounterfactualScenarioCreate,
+        metrics: list["TacticalImpactMetric"] | None = None,
+        unavailable_reasons: list[str] | None = None,
+) -> CounterfactualScenarioResult:
         if not self._valid(scenario.baseline_formation):
             return self._unsupported(scenario, "Unknown baseline formation")
         if not self._valid(scenario.counterfactual_formation):
@@ -133,6 +139,7 @@ class _DeterministicEngine:
             "Structural comparison only. No predictions or probabilities fabricated."
         )
 
+        # 11C: include computed metrics and unavailable reasons
         return CounterfactualScenarioResult(
             scenario_id=scenario.scenario_id,
             match_id=scenario.match_id,
@@ -143,6 +150,8 @@ class _DeterministicEngine:
             warnings=warnings,
             simulator_status="available",
             analyzed_at="",
+            metrics=metrics or [],
+            unavailable_reasons=unavailable_reasons or [],
         )
 
     @staticmethod
@@ -253,6 +262,123 @@ class CounterfactualService:
     _det_sim = staticmethod(lambda sc: _det_analysis(sc))
 
 
+def _compute_impact_metrics(scenario: CounterfactualScenarioCreate) -> tuple[list["TacticalImpactMetric"], list[str]]:
+    """Compute tactical impact metrics from formation numbers only.
+
+    11C: only metrics derivable from existing 11B data (formation numbers, player counts).
+    No positional metrics (no centroid/width/depth/spacing — synthetic state has no coordinates).
+
+    Returns (metrics, unavailable_reasons) where unavailable_reasons explains why
+    any metric could not be computed from available data.
+    """
+    from app.schemas.counterfactual import TacticalImpactMetric
+
+    metrics: list["TacticalImpactMetric"] = []
+    unavailable_reasons: list[str] = []
+
+    # Parse baseline formation
+    try:
+        bp = scenario.baseline_formation.split("-")
+        bl_h = int(bp[0]) if len(bp) > 0 else 0
+        bl_a = int(bp[1]) if len(bp) > 1 else 0
+    except (ValueError, IndexError):
+        unavailable_reasons.append("Could not parse baseline formation string")
+        return metrics, unavailable_reasons
+
+    # Parse counterfactual formation
+    try:
+        cp = scenario.counterfactual_formation.split("-")
+        cf_h = int(cp[0]) if len(cp) > 0 else 0
+        cf_a = int(cp[1]) if len(cp) > 1 else 0
+    except (ValueError, IndexError):
+        unavailable_reasons.append("Could not parse counterfactual formation string")
+        return metrics, unavailable_reasons
+
+    # Player-count metrics: genuinely derivable from formation numbers
+    baseline_home = bl_h
+    baseline_away = bl_a
+    counterfactual_home = cf_h
+    counterfactual_away = cf_a
+
+    baseline_total = baseline_home + baseline_away
+    counterfactual_total = counterfactual_home + counterfactual_away
+
+    # Metric 1: Baseline home player count
+    metrics.append(
+        TacticalImpactMetric(
+            name="baseline_home_player_count",
+            baseline_value=float(baseline_home),
+            counterfactual_value=float(counterfactual_home),
+            delta=float(counterfactual_home) - float(baseline_home) if baseline_home is not None and counterfactual_home is not None else None,
+            units="players",
+            available=True,
+            reason=None,
+        )
+    )
+
+    # Metric 2: Baseline away player count
+    metrics.append(
+        TacticalImpactMetric(
+            name="baseline_away_player_count",
+            baseline_value=float(baseline_away),
+            counterfactual_value=float(counterfactual_away),
+            delta=float(counterfactual_away) - float(baseline_away) if baseline_away is not None and counterfactual_away is not None else None,
+            units="players",
+            available=True,
+            reason=None,
+        )
+    )
+
+    # Metric 3: Total player count comparison (already validated in 11B to match)
+    metrics.append(
+        TacticalImpactMetric(
+            name="total_player_count",
+            baseline_value=float(baseline_total),
+            counterfactual_value=float(counterfactual_total),
+            delta=float(counterfactual_total) - float(baseline_total) if baseline_total is not None and counterfactual_total is not None else None,
+            units="players",
+            available=True,
+            reason=None,
+        )
+    )
+
+    # Formation-change observations (structural, not positional)
+    if baseline_home != counterfactual_home:
+        metrics.append(
+            TacticalImpactMetric(
+                name="home_player_shift",
+                baseline_value=float(baseline_home),
+                counterfactual_value=float(counterfactual_home),
+                delta=float(counterfactual_home) - float(baseline_home),
+                units="players",
+                available=True,
+                reason=None,
+            )
+        )
+
+    if baseline_away != counterfactual_away:
+        metrics.append(
+            TacticalImpactMetric(
+                name="away_player_shift",
+                baseline_value=float(baseline_away),
+                counterfactual_value=float(counterfactual_away),
+                delta=float(counterfactual_away) - float(baseline_away),
+                units="players",
+                available=True,
+                reason=None,
+            )
+        )
+
+    # Positional metrics are explicitly UNAVAILABLE — synthetic 11B state
+    # has NO positional coordinates. Do NOT fabricate centroid/width/depth/spacing.
+    unavailable_reasons.append(
+        "Positional metrics (centroid, width, depth, spacing) unavailable: "
+        "synthetic 11B tactical state has no positional coordinates"
+    )
+
+    return metrics, unavailable_reasons
+
+
 def _det_analysis(scenario: CounterfactualScenarioCreate) -> CounterfactualScenarioResult:
     """Perform deterministic analysis using Phase 07 tactical state representations.
 
@@ -261,6 +387,9 @@ def _det_analysis(scenario: CounterfactualScenarioCreate) -> CounterfactualScena
     No ML, no probabilities, no fabricated football conclusions.
     """
     engine = _DeterministicEngine()
+
+    # Compute tactical impact metrics (11C — formation-derivable only)
+    metrics, unavailable_reasons = _compute_impact_metrics(scenario)
 
     # Construct synthetic baseline from formation spec
     parts = scenario.baseline_formation.split("-")
@@ -336,4 +465,4 @@ def _det_analysis(scenario: CounterfactualScenarioCreate) -> CounterfactualScena
     )
     baseline = _TacSeq(frames=[frm])
 
-    return engine.analyze(baseline, scenario)
+    return engine.analyze(baseline, scenario, metrics, unavailable_reasons)

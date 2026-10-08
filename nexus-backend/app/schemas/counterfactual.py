@@ -146,6 +146,83 @@ class CounterfactualScenarioResult(BaseModel):
         ).isoformat(),
         description="ISO timestamp of when the result was analyzed/generated",
     )
+    # 11C: Tactical impact metrics — derived observations, NOT predictions.
+    # Computed from existing tactical state; unavailable metrics carry explicit reasons.
+    metrics: list["TacticalImpactMetric"] = Field(
+        default_factory=list,
+        description="Structural impact metrics comparing baseline vs counterfactual",
+    )
+    unavailable_reasons: list[str] = Field(
+        default_factory=list,
+        description="Reasons why individual metrics could not be computed",
+    )
+
+
+class TacticalImpactMetric(BaseModel):
+    """A single tactical impact metric with baseline/counterfactual values and delta.
+
+    All values are finite numeric observations derived from existing tactical state.
+    Unknown/unavailable values are explicitly marked, never invented.
+    """
+
+    model_config = ConfigDict(extra="forbid")
+
+    name: str
+    baseline_value: float | None = Field(
+        default=None,
+        description="Metric value from the baseline tactical state",
+    )
+    counterfactual_value: float | None = Field(
+        default=None,
+        description="Metric value from the counterfactual tactical state",
+    )
+    delta: float | None = Field(
+        default=None,
+        description="Counterfactual minus baseline (baseline to counterfactual)",
+    )
+    units: str = Field(
+        default="",
+        description="Units or meaning of the metric (e.g. 'players')",
+    )
+    available: bool = Field(
+        True,
+        description="Whether the metric could be computed from available data",
+    )
+    reason: str | None = Field(
+        default=None,
+        description="Why the metric is unavailable if available=False",
+    )
+
+
+class TacticalImpactResult(BaseModel):
+    """Container for tactical impact metrics computed for a counterfactual scenario.
+
+    This is read-only — it never mutates match/player history or database records.
+    """
+
+    model_config = ConfigDict(extra="forbid", frozen=True)
+
+    scenario_id: UUID
+    match_id: UUID
+    baseline_formation: CounterfactualFormation
+    counterfactual_formation: CounterfactualFormation
+    metrics: list[TacticalImpactMetric] = Field(
+        default_factory=list,
+        description="Tactical impact metrics computed for this scenario",
+    )
+    unavailable_reasons: list[str] = Field(
+        default_factory=list,
+        description="Reasons why individual metrics could not be computed",
+    )
+    analyzed_at: str = Field(
+        default_factory=lambda: __import__("datetime").datetime.now(
+            __import__("datetime").UTC
+        ).isoformat(),
+        description="ISO timestamp of when the impact analysis was performed",
+    )
+
+
+# 11C: Tactical impact metrics contract
 
 
 class CounterfactualScenario(CounterfactualScenarioBase):
