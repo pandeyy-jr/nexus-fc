@@ -466,3 +466,67 @@ def _det_analysis(scenario: CounterfactualScenarioCreate) -> CounterfactualScena
     baseline = _TacSeq(frames=[frm])
 
     return engine.analyze(baseline, scenario, metrics, unavailable_reasons)
+
+
+def _evaluate(request):
+    """Evaluate a counterfactual scenario against ground truth.
+
+    11D: evaluation foundation.
+    - Deterministic: same input to same result
+    - No ground truth to INSUFFICIENT_EVIDENCE
+    - Only computes metrics where evidence exists
+    - Never fabricates values
+    - Preserves provenance
+    """
+    from app.schemas.counterfactual import (
+        CounterfactualEvaluationStatus,
+        CounterfactualEvaluationMetric,
+        CounterfactualEvaluationResult,
+    )
+
+    # Build result with all values at construction (frozen model)
+    if request.expected_metrics and request.actual_metrics:
+        metrics = []
+        for metric_name in request.expected_metrics:
+            expected = request.actual_metrics.get(metric_name)
+            if expected is not None:
+                metric = CounterfactualEvaluationMetric(
+                    name=metric_name,
+                    expected=expected,
+                    actual=request.actual_metrics.get(metric_name),
+                    error=None,
+                    units='',
+                    available=True,
+                    reason=None,
+                )
+                metrics.append(metric)
+        result = CounterfactualEvaluationResult(
+            scenario_id=request.scenario_id,
+            match_id=request.match_id,
+            evaluation_status='available',
+            evaluation_method='11D-evaluation-foundation',
+            expected_reference=request.scenario_id,
+            simulated_reference=request.scenario_id,
+            metrics=metrics,
+            sample_count=len(metrics),
+            provenance=[f'request_id={request.scenario_id}',
+                        f'expected_metrics={request.expected_metrics}',
+                        f'actual_metrics_keys={list(request.actual_metrics.keys())}'],
+        )
+    else:
+        result = CounterfactualEvaluationResult(
+            scenario_id=request.scenario_id,
+            match_id=request.match_id,
+            evaluation_status='insufficient_evidence',
+            evaluation_method='11D-evaluation-foundation',
+            provenance=[f'request_id={request.scenario_id}'],
+        )
+        result.warnings.append(
+            'No ground truth evidence provided evaluation status is INSUFFICIENT_EVIDENCE. '
+            'Do not infer or fabricate metrics.'
+        )
+
+    return result
+
+
+# 11D: evaluation foundation

@@ -7,6 +7,7 @@ All inputs are strictly validated; unknown fields are rejected.
 from __future__ import annotations
 
 from uuid import UUID
+from enum import Enum
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
@@ -223,6 +224,137 @@ class TacticalImpactResult(BaseModel):
 
 
 # 11C: Tactical impact metrics contract
+
+
+class CounterfactualEvaluationStatus(str, Enum):
+    """Status of a counterfactual evaluation."""
+
+    INSUFFICIENT_EVIDENCE = "insufficient_evidence"
+    AVAILABLE = "available"
+    UNSUPPORTED = "unsupported"
+
+
+class CounterfactualEvaluationMetric(BaseModel):
+    """A single evaluation metric result.
+
+    Values are finite observations derived from supplied ground truth.
+    Unknown/unavailable values are explicitly marked, never invented.
+    """
+
+    model_config = ConfigDict(extra="forbid")
+
+    name: str
+    expected: float | None = Field(
+        default=None,
+        description="Ground-truth expected value",
+    )
+    actual: float | None = Field(
+        default=None,
+        description="Simulated/actual value from counterfactual result",
+    )
+    error: float | None = Field(
+        default=None,
+        description="actual - expected (if both available)",
+    )
+    units: str = Field(
+        default="",
+        description="Units of the metric",
+    )
+    available: bool = Field(
+        True,
+        description="Whether the metric could be computed from available evidence",
+    )
+    reason: str | None = Field(
+        default=None,
+        description="Why the metric is unavailable if available=False",
+    )
+
+
+class CounterfactualEvaluationResult(BaseModel):
+    """Result contract for counterfactual evaluation.
+
+    This is read-only — it never mutates match/player history or database records.
+    """
+
+    model_config = ConfigDict(extra="forbid", frozen=True)
+
+    scenario_id: UUID
+    match_id: UUID
+    evaluation_status: CounterfactualEvaluationStatus = Field(
+        default=CounterfactualEvaluationStatus.INSUFFICIENT_EVIDENCE,
+        description="Status of the evaluation",
+    )
+    evaluation_method: str = Field(
+        default="",
+        description="Method/version used for evaluation",
+    )
+    expected_reference: UUID | None = Field(
+        default=None,
+        description="Reference to ground-truth evidence",
+    )
+    simulated_reference: UUID | None = Field(
+        default=None,
+        description="Reference to simulated counterfactual result",
+    )
+    metrics: list[CounterfactualEvaluationMetric] = Field(
+        default_factory=list,
+        description="Evaluation metric results where evidence exists",
+    )
+    sample_count: int = Field(
+        default=0,
+        ge=0,
+        description="Number of samples/observations in the evaluation",
+    )
+    warnings: list[str] = Field(
+        default_factory=list,
+        description="Warnings about evaluation limitations",
+    )
+    provenance: list[str] = Field(
+        default_factory=list,
+        description="Provenance references for auditability",
+    )
+    evaluated_at: str = Field(
+        default_factory=lambda: __import__("datetime").datetime.now(
+            __import__("datetime").UTC
+        ).isoformat(),
+        description="ISO timestamp of when the evaluation was performed",
+    )
+
+
+# 11D: Evaluation foundation contracts
+
+
+class CounterfactualEvaluationRequest(BaseModel):
+    """Request contract for counterfactual evaluation.
+
+    Takes a scenario ID and optional ground-truth references.
+    Evaluation is a separate concern from simulation.
+    """
+
+    model_config = ConfigDict(extra="forbid")
+
+    scenario_id: UUID
+    match_id: UUID
+    expected_formation: CounterfactualFormation | None = Field(
+        default=None,
+        description="Ground-truth formation if available",
+    )
+    actual_formation: CounterfactualFormation | None = Field(
+        default=None,
+        description="Actual observed formation from real data if available",
+    )
+    expected_metrics: list[str] | None = Field(
+        default=None,
+        description="Metric names for which ground truth is provided",
+    )
+    actual_metrics: dict[str, float] | None = Field(
+        default=None,
+        description="Actual metric values from real data if available",
+    )
+    simulator_result_id: UUID | None = Field(
+        default=None,
+        description="Reference to the counterfactual simulation result",
+    )
 
 
 class CounterfactualScenario(CounterfactualScenarioBase):
