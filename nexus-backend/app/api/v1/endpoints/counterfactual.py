@@ -16,6 +16,8 @@ from app.api.dependencies import CurrentUser, SessionDependency
 from app.schemas.counterfactual import (
     CounterfactualScenarioCreate,
     CounterfactualScenarioResult,
+    CounterfactualEvaluationRequest,
+    CounterfactualEvaluationResult,
 )
 from app.services.counterfactual import CounterfactualService
 
@@ -84,3 +86,30 @@ async def simulate_counterfactual(
     # Fall back to 11A unavailable result
     service = CounterfactualService.unavailable()
     return service.simulate_scenario(payload)
+
+
+@router.post(
+    "/evaluate",
+    summary="Evaluate a counterfactual scenario against ground truth",
+    response_model=CounterfactualEvaluationResult,
+)
+async def evaluate_counterfactual(
+    payload: CounterfactualEvaluationRequest,
+    session: SessionDependency,
+    actor: CurrentUser,
+) -> CounterfactualEvaluationResult:
+    """Evaluate a counterfactual scenario against optional ground truth.
+
+    11D: evaluation integration.
+    - Reuses the Phase 11D evaluation foundation service.
+    - Validates scenario and reference compatibility.
+    - Returns INSUFFICIENT_EVIDENCE when no ground truth is provided.
+    - Computes only deterministic metrics mathematically justified by supplied data.
+    - Preserves provenance, warnings, and evaluation version.
+    - Evaluation is read-only; never mutates baseline or hypothetical scenarios.
+    """
+    service = CounterfactualService.deterministic()
+    result = service._evaluate(payload)
+    return result
+
+
