@@ -38,7 +38,7 @@ from app.core.config import Settings
 logger = logging.getLogger(__name__)
 
 _SYSTEM_INSTRUCTIONS = (
-    "You are the NEXUS FC club assistant. Answer only from the evidence "
+    "You are the TACTUSBALL club assistant. Answer only from the evidence "
     "returned by tools. Never invent players, matches, statistics, medical "
     "facts, or tactical events. If evidence is insufficient, say so."
 )

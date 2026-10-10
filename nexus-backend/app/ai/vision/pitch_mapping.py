@@ -83,7 +83,7 @@ class CalibratedHomography:
 
 @dataclass(frozen=True)
 class MappingProvenance:
-    """Sidecar answering 'why does NEXUS FC believe this location?'."""
+    """Sidecar answering 'why does TACTUSBALL believe this location?'."""
 
     calibration_id: str
     estimator_name: str

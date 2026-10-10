@@ -1,4 +1,4 @@
-# NEXUS FC Backend
+# TACTUSBALL Backend
 
 Phase 04 extends the backend foundation with authentication, role-based authorization, squad management, training history, operational availability, and player development records. Public registration creates a `PLAYER`; admins manage user roles and account activation. Medical records, injury prediction, performance analytics, tactical AI, and frontend functionality are not implemented.
 

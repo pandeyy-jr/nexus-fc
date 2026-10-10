@@ -28,7 +28,7 @@ async def test_info(client: AsyncClient) -> None:
 
     assert response.status_code == 200
     assert response.json() == {
-        "name": "NEXUS FC Backend",
+        "name": "TACTUSBALL Backend",
         "version": "0.1.0",
         "environment": "test",
         "api_version": "v1",

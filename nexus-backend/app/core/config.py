@@ -13,7 +13,7 @@ class Settings(BaseSettings):
         extra="ignore",
     )
 
-    app_name: str = "NEXUS FC Backend"
+    app_name: str = "TACTUSBALL Backend"
     app_version: str = "0.1.0"
     environment: Literal["development", "test", "staging", "production"] = "development"
     database_url: str = "postgresql+psycopg://nexus:nexus@localhost:5432/nexus"

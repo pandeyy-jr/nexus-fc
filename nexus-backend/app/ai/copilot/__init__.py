@@ -1,4 +1,4 @@
-"""NEXUS FC AI Copilot tool layer (Phase 09A).
+"""TACTUSBALL AI Copilot tool layer (Phase 09A).
 
 Provider-independent tool contracts and a governed registry. The LLM
 never touches the database, filesystem, Qdrant, or application
