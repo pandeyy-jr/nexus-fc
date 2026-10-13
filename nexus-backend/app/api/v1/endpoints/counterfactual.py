@@ -21,7 +21,7 @@ from app.schemas.counterfactual import (
 )
 from app.services.counterfactual import CounterfactualService
 
-router = APIRouter(prefix="/counterfactual", tags=["counterfactual"])
+router = APIRouter(tags=["counterfactual"])
 
 
 @router.get(

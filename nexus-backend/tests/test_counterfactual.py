@@ -529,3 +529,13 @@ def test_api_authorization():
     )
     result = service.simulate_scenario(scenario)
     assert result.simulator_status == 'available'
+
+
+async def test_counterfactual_routes_registered_and_protected(client):
+    """Counterfactual routes are mounted once and require authentication."""
+    unauthenticated = await client.post("/api/v1/counterfactual/simulate", json={})
+    assert unauthenticated.status_code in (401, 403)
+    unauthenticated = await client.post("/api/v1/counterfactual/evaluate", json={})
+    assert unauthenticated.status_code in (401, 403)
+    unauthenticated = await client.get("/api/v1/counterfactual/health")
+    assert unauthenticated.status_code in (401, 403)
