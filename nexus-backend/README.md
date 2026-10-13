@@ -43,6 +43,26 @@ Configuration is read from environment variables or `.env`:
 
 The JWT secret must be at least 32 characters. CORS origins default to an empty list. Never commit real credentials.
 
+### Hosted PostgreSQL (including Supabase)
+
+`DATABASE_URL` is read only by the backend and Alembic. Standard
+`postgresql://` and `postgres://` URLs are normalized to SQLAlchemy's
+`postgresql+psycopg://` async driver. Keep the URL in the backend `.env` or a
+deployment secret; never put it in frontend variables or commit it.
+
+For Supabase, copy the URI from **Dashboard → Connect** rather than composing
+the host, port, or username. For this long-running FastAPI service, use the
+direct connection when the host network supports its IP version, or the
+session pooler otherwise. Add `sslmode=require` as shown in Supabase's
+connection guidance. Percent-encode reserved characters in the database
+password. Migrations should use the direct connection where available.
+
+Supabase supplies PostgreSQL, not the client driver. Windows must still be able
+to load Psycopg's PostgreSQL client library. If Windows Application Control
+blocks that library, use the project's Linux Docker runtime or ask the device
+administrator to approve an official PostgreSQL client installation; do not
+disable or work around the policy. No Supabase credentials are included here.
+
 ## Roles and registration
 
 The supported roles are `HEAD_COACH`, `ASSISTANT_COACH`, `ANALYST`, `SPORTS_SCIENTIST`, `MEDICAL_STAFF`, `SCOUT`, `PLAYER`, `DIRECTOR`, and `ADMIN`. Stored role names are constrained to this set. Public registration always assigns `PLAYER`; registration rejects unknown extra fields, including a client-supplied `role`.

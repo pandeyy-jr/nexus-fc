@@ -163,7 +163,7 @@ def upgrade() -> None:
         sa.ForeignKeyConstraint(
             ["training_session_id"],
             ["training_sessions.id"],
-            name="fk_training_participations_training_session_id_training_sessions",
+            name="fk_training_participations_session_training_sessions",
             ondelete="RESTRICT",
         ),
         sa.ForeignKeyConstraint(
@@ -360,7 +360,7 @@ def upgrade() -> None:
         ),
         sa.CheckConstraint(
             f"progress_status IN ({_values(DEVELOPMENT_STATUSES)})",
-            name="ck_player_development_assessments_assessment_progress_status_values",
+            name="ck_player_development_assessments_progress_values",
         ),
         sa.ForeignKeyConstraint(
             ["player_id"],
@@ -371,7 +371,7 @@ def upgrade() -> None:
         sa.ForeignKeyConstraint(
             ["goal_id"],
             ["player_development_goals.id"],
-            name="fk_player_development_assessments_goal_id_player_development_goals",
+            name="fk_player_development_assessments_goal_development_goals",
             ondelete="RESTRICT",
         ),
         sa.ForeignKeyConstraint(

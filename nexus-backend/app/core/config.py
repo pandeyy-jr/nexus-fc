@@ -33,6 +33,15 @@ class Settings(BaseSettings):
     copilot_rate_limit_requests: int = Field(default=20, ge=1, le=1000)
     copilot_rate_limit_window_seconds: float = Field(default=60.0, gt=0, le=3600)
 
+    @field_validator("database_url")
+    @classmethod
+    def normalize_postgresql_driver_url(cls, value: str) -> str:
+        """Use the installed psycopg 3 driver for standard PostgreSQL URLs."""
+        for scheme in ("postgresql://", "postgres://"):
+            if value.startswith(scheme):
+                return f"postgresql+psycopg://{value[len(scheme) :]}"
+        return value
+
     @field_validator("jwt_secret_key")
     @classmethod
     def validate_jwt_secret(cls, value: SecretStr) -> SecretStr:

@@ -44,11 +44,15 @@ async def create_match_catalog(database: DatabaseFixture) -> dict[str, UUID]:
 
 
 def match_payload(catalog: dict[str, UUID], **overrides: object) -> dict[str, object]:
-    return {
+    payload = {
         **catalog,
         "scheduled_at": "2026-10-01T15:00:00Z",
         "home_away": "HOME",
         **overrides,
+    }
+    return {
+        key: str(value) if isinstance(value, UUID) else value
+        for key, value in payload.items()
     }
 
 
