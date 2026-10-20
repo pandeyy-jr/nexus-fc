@@ -10,8 +10,12 @@ Decide **whether** something should animate and **which technique** to use, befo
 
 ## Required source files to inspect
 - `frontend/src/main.tsx`, `frontend/src/style.css` (the entire UI surface).
-- `frontend/package.json` (installed packages — React + Vite only as of 2026-10).
+- `frontend/src/lib/motion/` (shared Anime.js utilities: presets, useAnime hook, tokens).
+- `frontend/package.json` (installed packages — React + Vite + animejs@4).
 - `.opencode/skills/RESEARCH.md` (source index, licenses, version notes).
+- `.opencode/skills/emil-design-eng/SKILL.md` (UI polish philosophy).
+- `.opencode/skills/animate/SKILL.md` (animation construction framework).
+- `.opencode/skills/review-animations/SKILL.md` (animation review standards).
 
 ## Decision procedure
 1. **Gate first.** Frequency tier: 100+/day or keyboard-initiated → no animation, stop. Tens/day → near-imperceptible only. Occasional → standard. Rare/first-time → delight budget. No named purpose (feedback, spatial consistency, state indication, preventing a jarring change, explanation, delight)? Stop.
@@ -55,6 +59,10 @@ Every routed task inherits: `prefers-reduced-motion` gentler variant, `@media (h
 ## Reference links
 - Emil `animate`: https://github.com/emilkowalski/skills/tree/main/skills/animate (MIT)
 - Emil `find-animation-opportunities`: https://github.com/emilkowalski/skills/tree/main/skills/find-animation-opportunities (MIT)
+- Emil `review-animations`: https://github.com/emilkowalski/skills/tree/main/skills/review-animations (MIT)
+- Emil `emil-design-eng`: https://github.com/emilkowalski/skills/tree/main/skills/emil-design-eng (MIT)
+- Emil `animation-performance`: https://github.com/emilkowalski/skills/tree/main/skills/animation-performance (MIT)
+- Emil `apple-design`: https://github.com/emilkowalski/skills/tree/main/skills/apple-design (MIT)
 - LottieFiles motion-design: https://github.com/LottieFiles/motion-design-skill (MIT)
 - frontend-ai-skills `70-frontend-skill-router`: https://github.com/JustineBijuPaul/frontend-ai-skills (MIT)
 - **Anime.js v4 (installed)**: https://animejs.com/documentation/ — official docs,
