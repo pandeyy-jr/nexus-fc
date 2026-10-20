@@ -16,7 +16,7 @@ Scroll progress drives scenes on marketing pages (hero ball flight, section reve
 ## Decision procedure
 1. Gate per `tactus-motion-router`: marketing explanation → eligible; dashboard data → reject.
 2. Progress mapping must be **reversible and jump-free**: clamp segment index (never let `findIndex` return an unchecked `-1`), normalize by `scrollHeight - innerHeight`, interpolate within the segment. Scrolling up reverses the same timeline.
-3. Reveals: `IntersectionObserver` + CSS classes (current pattern). Sticky/pinned multi-scene timelines: only then evaluate GSAP + ScrollTrigger; default to reject (bundle + imperative React friction).
+3. Reveals: `IntersectionObserver` + CSS classes (current pattern). Sticky/pinned multi-scene timelines: only then evaluate GSAP + ScrollTrigger or Anime.js timelines (`frontend/src/lib/motion`); default to reject (bundle + imperative React friction).
 4. Smooth-scroll feel: **reject Lenis** — anchor links (`#system`, `#story`), modals, and native scroll suffice; Lenis risks anchor/modal fights for zero needed gain.
 5. Video scrubbing / image sequences: only with licensed, optimized assets; none exist today — reject until assets + justification exist.
 6. Cleanup: observers disconnected, rAF cancelled, scroll/resize listeners removed (current pattern in effect cleanups).

@@ -21,6 +21,14 @@ Decide **whether** something should animate and **which technique** to use, befo
    - Predetermined motion under load → CSS keyframes.
    - Programmatic CSS-performance control → WAAPI (`element.animate()`).
    - Scroll progress mapping, reveals → `tactus-cinematic-scroll` (rAF + IntersectionObserver; already the app pattern).
+   - Coordinated multi-element timelines, staggered reveals with precise
+     timing, form→result state transitions, or exit animations → Anime.js
+     (`frontend/src/lib/motion`, `createScope()` + `useAnime()` hook;
+     installed as `animejs@4`). Prefer scoped, cleanup-safe usage.
+   - Springs, layout animation, gestures → propose Motion for React
+     (`tactus-micro-interactions`), install only with justification.
+   - Pinned multi-scene timelines → propose GSAP + ScrollTrigger
+     (not installed; needs justification).
    - Springs, layout animation, exit animation, gestures → propose Motion for React (`tactus-micro-interactions`), install only with justification.
    - Pinned multi-scene timelines → propose GSAP + ScrollTrigger (not installed; needs justification).
    - Smooth scrolling feel → **reject Lenis** (anchor links, modals, native scroll suffice; see research index).
@@ -49,6 +57,9 @@ Every routed task inherits: `prefers-reduced-motion` gentler variant, `@media (h
 - Emil `find-animation-opportunities`: https://github.com/emilkowalski/skills/tree/main/skills/find-animation-opportunities (MIT)
 - LottieFiles motion-design: https://github.com/LottieFiles/motion-design-skill (MIT)
 - frontend-ai-skills `70-frontend-skill-router`: https://github.com/JustineBijuPaul/frontend-ai-skills (MIT)
+- **Anime.js v4 (installed)**: https://animejs.com/documentation/ — official docs,
+  https://github.com/juliangarnier/anime — source (MIT). Use `animate()`,
+  `createScope()`, `timeline()`; named imports for tree-shaking.
 
 ## Exit criteria
 Routing stated up front; no redundant installs; constraints attached; build green; manual feel-checks listed, never claimed.

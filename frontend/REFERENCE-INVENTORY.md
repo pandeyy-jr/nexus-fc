@@ -30,6 +30,17 @@ adapted to the graphite/lime TACTUSBALL system. Upstream licenses respected
   https://github.com/JustineBijuPaul/frontend-ai-skills — router contract
   (`70-frontend-skill-router`), scroll-m storytelling, micro-interactions;
   70-skill bundle **not installed** (selection pollution; distilled instead).
+- **Anime.js v4** (MIT) — https://animejs.com/documentation/ (official docs),
+  https://github.com/juliangarnier/anime (source). **Installed as `animejs@4`**
+  in `frontend/`. Integrated via `frontend/src/lib/motion/`:
+  `useAnime()` hook wrapping `createScope()` with `scope.revert()` cleanup,
+  typed presets (`fadeInUp`, `fadeIn`, `subtleScaleIn`, `modalEnter`,
+  `sectionReveal`, `staggerDelay`), `animate()` named import for tree-shaking.
+  Applied to: feature explorer stagger reveals, Command Center card entrances,
+  Counterfactual Lab result transition, Copilot answer entry, Match Library
+  row reveals, Club Memory item reveals, Decision Replay row reveals, Player
+  Intelligence detail panel entrance. Respects `prefers-reduced-motion` and
+  the `tactus_motion` toggle via `shouldSkipMotion()`.
 - **Temlis sports templates** — https://www.temlis.com/subcategories/sports-websites
   (marketplace index reviewed; live previews gated) — principles only:
   oversized editorial headlines, sticky visual preview, restrained dark
@@ -82,3 +93,8 @@ adapted to the graphite/lime TACTUSBALL system. Upstream licenses respected
   stadium strip, pitch pass lane.
 - Original CSS tactile switch → footer motion toggle (this inventory's
   skeu-principle application).
+- Anime.js `animate()` + `createScope()` (scoped, revert-on-unmount) →
+  feature explorer stagger reveals, Command Center card entrances,
+  Counterfactual Lab result transition, Copilot answer entry, Match Library
+  row reveals, Club Memory item reveals, Decision Replay row reveals,
+  Player Intelligence detail panel entrance.

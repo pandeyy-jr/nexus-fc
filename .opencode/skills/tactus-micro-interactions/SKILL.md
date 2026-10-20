@@ -16,7 +16,10 @@ Make every interactive element feel tactile and legible with near-imperceptible,
 ## Decision procedure
 1. Name the purpose: feedback, spatial consistency, state indication, or preventing a jarring change. Else stop.
 2. Frequency check: nav/side-links (tens/day) → color/background only, no transform. Occasional (modals, lab runs, uploads) → standard 150–250ms motion.
-3. Tool: CSS transitions naming exact properties. Springs/layout/exit animations → propose Motion for React only with justification (not installed).
+3. Tool: CSS transitions naming exact properties. Springs/layout/exit
+   animations → propose Motion for React only with justification (not
+   installed). Coordinated multi-element or sequenced micro-feedback →
+   Anime.js (`frontend/src/lib/motion`, installed as `animejs@4`).
 4. Values: press `:active { transform: scale(0.97) }`, `transition: transform 160ms <strong-ease-out>`; entrances `scale(0.95–0.97)` + `opacity: 0`, `ease-out`, never `scale(0)`; modals centered (exempt from trigger-origin rule).
 5. Curves/durations from tokens: add `--ease-out: cubic-bezier(0.23, 1, 0.32, 1)`-style tokens to `:root` if missing; extend, never fork.
 
