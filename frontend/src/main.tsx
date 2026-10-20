@@ -92,7 +92,7 @@ function App() {
   useEffect(() => {
     const update = () => setPage(location.hash === '#app' ? 'Command center' : 'Home')
     window.addEventListener('hashchange', update)
-    const observer = new IntersectionObserver(entries => entries.forEach(entry => entry.target.classList.toggle('revealed', entry.isIntersecting)), { threshold: .14 })
+    const observer = new IntersectionObserver(entries => entries.forEach(entry => entry.target.classList.toggle('visible', entry.isIntersecting)), { threshold: .14 })
     document.querySelectorAll('.reveal').forEach(el => observer.observe(el))
     return () => { window.removeEventListener('hashchange', update); observer.disconnect() }
   }, [page])
