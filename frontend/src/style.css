@@ -70,7 +70,7 @@
 
 /* Split-screen club sign-in */
 .login-modal{display:grid;grid-template-columns:1fr 1fr;width:min(100%,900px);min-height:560px;padding:0;background:#f5f4ef;overflow:hidden;box-shadow:0 30px 110px #0009;}
-.login-visual{position:relative;min-height:560px;padding:30px;display:flex;flex-direction:column;justify-content:space-between;overflow:hidden;background:linear-gradient(180deg,#10140e24 15%,#10140ee8 100%),url('/images/hero-match.jpg') center/cover;color:#f5f4ed;}
+.login-visual{position:relative;min-height:560px;padding:30px;display:flex;flex-direction:column;justify-content:space-between;overflow:hidden;background:linear-gradient(180deg,#10140e24 15%,#10140ee8 100%),url('/images/feature-tactics.jpg') center/cover;color:#f5f4ed;}
 .login-visual:after{content:'';position:absolute;inset:13px;border:1px solid #ffffff30;pointer-events:none;}
 .login-brand{position:relative;z-index:1;display:flex;align-items:center;gap:8px;font-size:11px;font-weight:700;letter-spacing:.15em;}
 .login-brand img{width:34px;height:34px;object-fit:contain;}
